@@ -16,6 +16,9 @@ const privateKeys = [
   ...(process.env.ACCOUNTS === undefined ? []:process.env.ACCOUNTS.split(",")),
 ].filter(a => !!a);
 
+// default path (i.e.  `m/44'/60'/0'/0/0`
+const mnemonic = process.env.MNEMONIC;
+
 const { flatten } = require("./hardhat.tasks");
 task("flatten", "", async() => flatten("flatten"));
 
@@ -52,15 +55,16 @@ module.exports = {
   },
   defaultNetwork: "hardhat",
   namedAccounts: {
-    admin: 0,
-    ... !process.env.LEDGER_ADDRESS ? {}: {ledger: `ledger://${process.env.LEDGER_ADDRESS}`}
+    admin: 0
   },
   networks: {
     hardhat: {
       saveDeployments: true,
-      accounts: privateKeys.map((privateKey) => {
-        return {privateKey: privateKey, balance: "1000000000000000000000000"}
-      }),
+      accounts: mnemonic !== undefined ?
+        { mnemonic: mnemonic }
+        : privateKeys.map((privateKey) => {
+          return {privateKey: privateKey, balance: "1000000000000000000000000"}
+        }),
       allowUnlimitedContractSize: true,
     },
     binancetestnet: {
@@ -85,7 +89,7 @@ module.exports = {
   },
   paths: {
     sources: "flatten",
-    tests: "test",
+    tests: "tests",
     cache: "cache",
     artifacts: "artifacts",
     deploy: 'deploy',

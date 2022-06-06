@@ -2,7 +2,9 @@
 
 This project has contracts for SoundBox project
 
-# Command
+# Commands
+
+copy `.example.env` to `.env` and edit it 
 
 ```
 npx hardhat flatten

@@ -5,6 +5,7 @@ const mainContracts = [
 
   "WETH.sol",
   "Sound.sol",
+  "SoundBox.sol",
   "uniswapv2/UniswapV2Pair.sol",
   "uniswapv2/UniswapV2Factory.sol",
   "uniswapv2/UniswapV2Router02.sol",
