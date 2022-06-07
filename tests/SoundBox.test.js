@@ -73,16 +73,7 @@ describe("SoundBox", function () {
     const user = signers[1];
 
     await expect(box.connect(user).setAlbumPrice(1, 100000, 0)).to.be.revertedWith("!AUTHORIZED");
-    await expect(box.setAlbumPrice(1, 100000, 100000)).to.be.revertedWith("invalid price");
-
-    expect(await box.priceInSOUND(0)).to.equal(0);
-    expect(await box.priceInBUSD(0)).to.equal(toBN("100").mul(toBN(10).pow(18)));
-    expect(await box.priceInSOUND(1)).to.equal(0);
-    expect(await box.priceInBUSD(1)).to.equal(toBN("75").mul(toBN(10).pow(18)));
-    expect(await box.priceInSOUND(2)).to.equal(0);
-    expect(await box.priceInBUSD(2)).to.equal(toBN("50").mul(toBN(10).pow(18)));
-    expect(await box.priceInSOUND(3)).to.equal(0);
-    expect(await box.priceInBUSD(3)).to.equal(0);
+    // await expect(box.setAlbumPrice(1, 100000, 100000)).to.be.revertedWith("invalid price");
 
     await (await box.setAlbumPrice(1, 100000, 0)).wait();
     expect(await box.priceInSOUND(1)).to.equal(100000);
@@ -119,7 +110,7 @@ describe("SoundBox", function () {
     const oldSound = await sound.balanceOf(user.address);
 
     await (await box.setAlbumPrice(1, 100000, 0)).wait();
-    await expect(box.connect(user).buyNew(1)).to.be.revertedWith("not have enough fund");
+    await expect(box.connect(user).buyNew(1)).to.be.revertedWith("not enough balance");
 
     await (await sound.connect(user).approve(box.address, 1000000000000)).wait();
     await (await box.connect(user).deposit(1000000000000)).wait();
@@ -157,15 +148,15 @@ describe("SoundBox", function () {
     await (await box.connect(buyer).deposit(1000000000000)).wait();
 
     await (await box.connect(user).buyNew(1)).wait();
-    await expect(box.sellAlbum(0, true, 10000)).to.be.revertedWith("not owner");
+    await expect(box.sell(0, true, 10000)).to.be.revertedWith("not owner");
 
-    await expect(box.buyAlbum(0)).to.be.revertedWith("market not enable");
+    await expect(box.buy(0)).to.be.revertedWith("market not enable");
     await (await box.setEnableMarket()).wait();
-    await expect(box.buyAlbum(0)).to.be.revertedWith("not for sell");
-    await (await box.connect(user).sellAlbum(0, true, 10000)).wait();
+    await expect(box.buy(0)).to.be.revertedWith("not for sell");
+    await (await box.connect(user).sell(0, true, 10000)).wait();
 
     expect(await box.ownerOf(0)).to.equal(user.address);
-    await (await box.connect(buyer).buyAlbum(0)).wait();
+    await (await box.connect(buyer).buy(0)).wait();
     expect(await box.ownerOf(0)).to.equal(buyer.address);
     expect((await box.userBox(buyer.address))["balance"]).to.equal(1000000000000-10000);
     expect((await box.userBox(user.address))["balance"]).to.equal(10000);
@@ -213,7 +204,7 @@ describe("SoundBox", function () {
     );
     await (await box.connect(user).claim(signature, nonce, amount)).wait();
 
-    await expect(box.connect(user).withdraw(amount)).to.be.revertedWith("not enough fund");
+    await expect(box.connect(user).withdraw(amount)).to.be.revertedWith("not enough balance");
     await (await sound.transfer(box.address, "10000000000")).wait();
     await expect(box.connect(user).withdraw(amount+1)).to.be.revertedWith("amount exceeds balance");
     expect(await sound.balanceOf(user.address)).to.equal(0);
@@ -243,7 +234,7 @@ describe("SoundBox", function () {
     await (await box.connect(user).deposit(amount)).wait();
 
     expect(await sound.balanceOf(user.address)).to.equal(0);
-    await (await box.connect(user).withDrawAndClaim(amount+100, signature, nonce, amount)).wait();
+    await (await box.connect(user).claimAndWithdraw(amount+100, signature, nonce, amount)).wait();
 
     expect(await sound.balanceOf(user.address)).to.equal(amount+100);
     expect((await box.userBox(user.address))["balance"]).to.equal(amount-100);
@@ -254,4 +245,26 @@ describe("SoundBox", function () {
     expect(await sound.balanceOf(box.address)).to.equal(100);
   });
 
+  it("uri & metadata", async function() {
+    const {signers, sound, box, busd} = await deploy(hre);
+    const admin = signers[0];
+    const signer = signers[1];
+    const user = signers[2];
+
+    await (await box.setMetadataURI(0, "https://ipfs.infura.io:/ipfs/QmcmJ5yasARZFG81SeGKQVbY9AUCr1XJh7cCHzU6tTv6Yx")).wait();
+    await (await box.setMetadataURI(1, "https://ipfs.infura.io/ipfs/QmWDWaZ5PjihizwZFQZAPt7ra8MXMfAdQWNVL8A2MEC2sw")).wait();
+    await (await box.setMetadataURI(2, "https://ipfs.infura.io:/ipfs/QmdVc48xmi9VDqqq8rvtq7pueHWiQkwwEwaSwPoSS5hBiq")).wait();
+
+    await expect(box.setMetadataURI(3, "https://ipfs.infura.io:/ipfs/QmdVc48xmi9VDqqq8rvtq7pueHWiQkwwEwaSwPoSS5hBiq")).to.be.revertedWith("invalid type");
+
+    await (await busd.mint(user.address, "100000000000000000000000")).wait();
+    await (await busd.connect(user).approve(box.address, "100000000000000000000000")).wait();
+    await (await box.setLimitedAlbum(10, false)).wait();
+
+    await (await box.connect(user).buyNew(0)).wait();
+
+    console.log(await box.tokenURI(0));
+
+    await expect(box.connect(user).buyNew(3)).to.be.revertedWith("invalid type");
+  });
 });
